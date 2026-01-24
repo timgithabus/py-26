@@ -1,0 +1,167 @@
+import arcade
+import math
+
+SCREEN_WIDTH = 1980
+SCREEN_HEIGHT = 1080
+SCREEN_TITLE = "Игра на PyArcade: карта и герой"
+CAMERA_LERP = 0.12
+
+MAP_IMAGE = "map.png"
+HERO_IMAGE = "hero1.png"
+
+
+
+class Start_menu(arcade.View):
+    def __init__(self):
+        super().__init__()
+        self.map = arcade.load_texture(MAP_IMAGE)
+        self.speed = 5
+
+    def on_draw(self):
+        self.clear()
+        rect = arcade.rect.XYWH(
+            self.window.width // 2, self.window.height // 2,
+            self.window.width, self.window.height)
+        arcade.draw_texture_rect(self.map, rect)
+
+        outline_color = arcade.color.BLACK
+        fill_color = arcade.color.LIGHT_GRAY
+
+        button1_x = self.window.width // 4 - 40
+        button1_y = self.window.height - 200
+        button_width = 500
+        button_height = 80
+
+        button2_x = self.window.width // 4 - 40
+        button2_y = self.window.height - 290
+
+        arcade.draw_lbwh_rectangle_filled(
+            button1_x, button1_y, button_width, button_height, fill_color)
+        arcade.draw_lbwh_rectangle_outline(
+            button1_x, button1_y, button_width, button_height, outline_color)
+
+        arcade.draw_lbwh_rectangle_filled(
+            button2_x, button2_y, button_width, button_height, fill_color)
+        arcade.draw_lbwh_rectangle_outline(
+            button2_x, button2_y, button_width, button_height, outline_color)
+
+        arcade.draw_text("НАЧАТЬ ИГРАТЬ", button1_x * 2 + 100, button1_y + 40,
+                         arcade.color.BLACK, font_size=20, anchor_x="center", anchor_y="center")
+        arcade.draw_text("СМЕНА", button2_x * 2 + 100, button2_y + 40,
+                         arcade.color.BLACK, font_size=20, anchor_x="center", anchor_y="center")
+
+    def on_mouse_press(self, x, y, button, modifiers):
+        button1_x = self.width // 4 - 40
+        button1_y = self.height - 200
+        button_width = 500
+        button_height = 80
+
+        button2_x = self.width // 4 - 40
+        button2_y = self.height - 290
+
+        if (button1_x <= x <= button1_x + button_width and
+                button1_y <= y <= button1_y + button_height):
+            game_view = MyGame(selected_hero=0)
+            self.window.show_view(game_view)
+
+        if (button2_x <= x <= button2_x + button_width and
+                button2_y <= y <= button2_y + button_height):
+            hero_view = HeroSelectView()
+            self.window.show_view(hero_view)
+
+
+class HeroSelectView(arcade.Window):
+    def __init__(self):
+        super().__init__(500, 500, "Выбор героя")
+        self.heroes = []
+        for i in range(4):
+            self.heroes.append({
+                "texture": arcade.load_texture(f"hero{i+1}.png"),
+                "str": 10 + i * 2,
+                "def": 5 + i,
+                "hp": 100 + i * 20
+            })
+        self.selected = 0
+
+    def on_draw(self):
+        arcade.start_render()
+        for i in range(len(self.heroes)):
+            y = 400 - i * 70
+            color = arcade.color.GRAY if i == self.selected else arcade.color.LIGHT_GRAY
+            
+            left = 130
+            right = 130 + 180
+            bottom = y
+            top = y + 50
+            
+            arcade.draw_lrbt_rectangle_filled(left, right, top, bottom, color)
+            arcade.draw_text(f"Герой {i+1}", 130, y + 25, arcade.color.BLACK, 14, anchor_x="center", anchor_y="center")
+
+
+    def on_mouse_press(self, x, y, button, modifiers):
+        if button != arcade.MOUSE_BUTTON_LEFT:
+            return
+        for i in range(len(self.heroes)):
+            y_top = 400 - i * 70
+            y_bottom = y_top + 50
+            if 40 <= x <= 220 and y_top <= y <= y_bottom:
+                self.selected = i
+
+
+
+class MyGame(arcade.View):
+    def __init__(self, selected_hero=0):
+        super().__init__()
+        self.map = arcade.load_texture(MAP_IMAGE)
+        self.hero_sprite = arcade.Sprite(HERO_IMAGE, scale=0.25)
+        self.hero_sprite.center_x = SCREEN_WIDTH // 2
+        self.hero_sprite.center_y = SCREEN_HEIGHT // 2
+        self.sprite_list = arcade.SpriteList()
+        self.sprite_list.append(self.hero_sprite)
+        self.speed = 5
+
+    def on_draw(self):
+        self.clear()
+        rect = arcade.rect.XYWH(
+            SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, SCREEN_WIDTH, SCREEN_HEIGHT)
+        arcade.draw_texture_rect(self.map, rect)
+        self.sprite_list.draw()
+
+    def on_key_press(self, key, modifiers):
+        if key in (arcade.key.UP, arcade.key.W):
+            self.hero_sprite.change_y = self.speed
+        elif key in (arcade.key.DOWN, arcade.key.S):
+            self.hero_sprite.change_y = -self.speed
+        elif key in (arcade.key.LEFT, arcade.key.A):
+            self.hero_sprite.change_x = -self.speed
+        elif key in (arcade.key.RIGHT, arcade.key.D):
+            self.hero_sprite.change_x = self.speed
+
+    def on_key_release(self, key, modifiers):
+        if key in (arcade.key.UP, arcade.key.W, arcade.key.DOWN, arcade.key.S):
+            self.hero_sprite.change_y = 0
+        if key in (arcade.key.LEFT, arcade.key.A, arcade.key.RIGHT, arcade.key.D):
+            self.hero_sprite.change_x = 0
+
+    def on_update(self, delta_time):
+        self.hero_sprite.center_x += self.hero_sprite.change_x
+        self.hero_sprite.center_y += self.hero_sprite.change_y
+        if self.hero_sprite.center_y + self.hero_sprite.height // 2 >= SCREEN_HEIGHT:
+            self.hero_sprite.center_y = SCREEN_HEIGHT - self.hero_sprite.height // 2
+        if self.hero_sprite.center_y - self.hero_sprite.height // 2 <= 0:
+            self.hero_sprite.center_y = self.hero_sprite.height // 2
+        if self.hero_sprite.center_x + self.hero_sprite.width // 2 >= SCREEN_WIDTH:
+            self.hero_sprite.center_x = SCREEN_WIDTH - self.hero_sprite.width // 2
+        if self.hero_sprite.center_x - self.hero_sprite.width // 2 <= 0:
+            self.hero_sprite.center_x = self.hero_sprite.width // 2
+
+
+def main():
+    window = arcade.Window(800, 500, "Меню")
+    start_view = Start_menu()
+    window.show_view(start_view)
+    arcade.run()
+
+
+if __name__ == "__main__":
+    main()
