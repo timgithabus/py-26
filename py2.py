@@ -1,0 +1,480 @@
+
+import arcade
+import math
+
+SCREEN_WIDTH = 1980
+SCREEN_HEIGHT = 1080
+SCREEN_TITLE = "Игра на PyArcade: карта и герой"
+CAMERA_LERP = 0.12
+
+MAP_IMAGE = "map.jpg"
+HERO_IMAGE = "пудж.png"
+MAP_SCALE = 5.0
+MAP_WIDTH = int(SCREEN_WIDTH * MAP_SCALE)
+MAP_HEIGHT = int(SCREEN_HEIGHT * MAP_SCALE)
+
+
+class Start_menu(arcade.View):
+    def __init__(self):
+        super().__init__()
+        self.map = arcade.load_texture(f'images/map.jpg')
+        self.speed = 5
+        self.selected_hero = 0
+        self.hero_textures = [arcade.load_texture(f"images/пудж.png") for i in range(4)]
+
+    def on_draw(self):
+        self.clear()
+        rect = arcade.rect.XYWH(
+            self.window.width // 2, self.window.height // 2,
+            self.window.width, self.window.height)
+        arcade.draw_texture_rect(self.map, rect)
+
+        title_y = self.window.height - 60
+        arcade.draw_text(
+            "МЕНЮ",
+            self.window.width // 2,
+            title_y,
+            arcade.color.BLACK,
+            42,
+            anchor_x="center",
+            bold=True,
+        )
+        arcade.draw_lbwh_rectangle_filled(
+            self.window.width // 2 - 220,
+            title_y - 10,
+            440,
+            6,
+            arcade.color.BLACK,
+        )
+
+        outline_color = arcade.color.BLACK
+        fill_color = arcade.color.LIGHT_GRAY
+
+        button1_x = self.window.width // 5 - 80
+        button1_y = self.window.height - 210
+        button_width = 500
+        button_height = 80
+
+        button2_x = self.window.width // 5 - 80
+        button2_y = self.window.height - 305
+
+        panel_x = button1_x - 30
+        panel_y = button2_y - 35
+        panel_w = button_width + 40
+        panel_h = (button1_y - button2_y) + button_height + 60
+        arcade.draw_lbwh_rectangle_filled(
+            panel_x, panel_y, panel_w, panel_h, (255, 255, 255, 190)
+        )
+
+        arcade.draw_lbwh_rectangle_filled(
+            button1_x, button1_y, button_width, button_height, fill_color)
+        arcade.draw_lbwh_rectangle_outline(
+            button1_x, button1_y, button_width, button_height, outline_color)
+
+        arcade.draw_lbwh_rectangle_filled(
+            button2_x, button2_y, button_width, button_height, fill_color)
+        arcade.draw_lbwh_rectangle_outline(
+            button2_x, button2_y, button_width, button_height, outline_color)
+
+        arcade.draw_text("НАЧАТЬ ИГРАТЬ", button1_x + button_width // 2, button1_y + 40,
+                         arcade.color.BLACK, font_size=20, anchor_x="center", anchor_y="center")
+        arcade.draw_text("СМЕНА", button2_x + button_width // 2, button2_y + 40,
+                         arcade.color.BLACK, font_size=20, anchor_x="center", anchor_y="center")
+
+        preview_left = self.window.width - 320
+        preview_bottom = self.window.height - 420
+        preview_w = 300
+        preview_h = 320
+        arcade.draw_lbwh_rectangle_filled(
+            preview_left, preview_bottom, preview_w, preview_h, (255, 255, 255, 190)
+        )
+        arcade.draw_lbwh_rectangle_outline(
+            preview_left, preview_bottom, preview_w, preview_h, arcade.color.BLACK
+        )
+        arcade.draw_text(
+            "Выбранный герой",
+            preview_left + preview_w // 2,
+            preview_bottom + preview_h - 30,
+            arcade.color.BLACK,
+            16,
+            anchor_x="center",
+            bold=True,
+        )
+        hero_texture = self.hero_textures[self.selected_hero]
+        hero_rect = arcade.rect.XYWH(
+            preview_left + preview_w // 2,
+            preview_bottom + preview_h // 2 - 10,
+            160,
+            160,
+        )
+        arcade.draw_texture_rect(hero_texture, hero_rect)
+
+    def on_mouse_press(self, x, y, button, modifiers):
+        button1_x = self.width // 5 - 80
+        button1_y = self.height - 210
+        button_width = 500
+        button_height = 80
+
+        button2_x = self.width // 5 - 80
+        button2_y = self.height - 305
+
+        if (button1_x <= x <= button1_x + button_width and
+                button1_y <= y <= button1_y + button_height):
+            game_view = MyGame(selected_hero=self.selected_hero)
+            self.window.show_view(game_view)
+
+        if (button2_x <= x <= button2_x + button_width and
+                button2_y <= y <= button2_y + button_height):
+            hero_view = HeroSelectView(self)
+            self.window.show_view(hero_view)
+
+
+class HeroSelectView(arcade.View):
+    def __init__(self, start_view):
+        super().__init__()
+        self.start_view = start_view
+        self.map = arcade.load_texture(MAP_IMAGE)
+        self.heroes = []
+        for i in range(4):
+            self.heroes.append({
+                "texture": arcade.load_texture(f"images/пудж.png"),
+                "str": 10 + i * 2,
+                "def": 5 + i,
+                "hp": 100 + i * 20,
+                "desc": f"Описание героя {i}."
+            })
+        self.selected = self.start_view.selected_hero
+
+    def on_draw(self):
+        self.clear()
+        rect = arcade.rect.XYWH(
+            self.window.width // 2, self.window.height // 2,
+            self.window.width, self.window.height)
+        arcade.draw_texture_rect(self.map, rect)
+        panel_left = self.window.width - 320
+        panel_right = self.window.width - 40
+        panel_top = self.window.height - 80
+        panel_bottom = 120
+
+        list_panel_x = 90
+        list_panel_y = 120
+        list_panel_w = 260
+        list_panel_h = 340
+        arcade.draw_lbwh_rectangle_filled(
+            list_panel_x, list_panel_y, list_panel_w, list_panel_h, (255, 255, 255, 200)
+        )
+
+        for i in range(len(self.heroes)):
+            y = 400 - i * 70
+            color = arcade.color.GRAY if i == self.selected else arcade.color.LIGHT_GRAY
+
+            left = 130
+            right = 130 + 180
+            bottom = y
+            top = y + 50
+
+            arcade.draw_lrbt_rectangle_filled(left, right, bottom, top, color)
+            arcade.draw_text(
+                f"Герой {i+1}",
+                left + (right - left) // 2,
+                y + 25,
+                arcade.color.BLACK,
+                16,
+                anchor_x="center",
+                anchor_y="center",
+            )
+
+        arcade.draw_lrbt_rectangle_filled(
+            panel_left, panel_right, panel_bottom, panel_top, (255, 255, 255, 200)
+        )
+        arcade.draw_lrbt_rectangle_outline(
+            panel_left, panel_right, panel_bottom, panel_top, arcade.color.BLACK
+        )
+        hero_data = self.heroes[self.selected]
+        texture = hero_data["texture"]
+        icon_center_x = (panel_left + panel_right) // 2
+        icon_center_y = panel_top - 80
+        icon_rect = arcade.rect.XYWH(icon_center_x, icon_center_y, 120, 120)
+        arcade.draw_texture_rect(texture, icon_rect)
+        stats_x = panel_left + 20
+        stats_y = panel_top - 170
+        arcade.draw_text(
+            f"Урон: {hero_data['str']}",
+            stats_x,
+            stats_y,
+            arcade.color.BLACK,
+            22,
+            bold=True,
+        )
+        arcade.draw_text(
+            f"Защита: {hero_data['def']}",
+            stats_x,
+            stats_y - 28,
+            arcade.color.BLACK,
+            22,
+            bold=True,
+        )
+        arcade.draw_text(
+            f"НР: {hero_data['hp']}",
+            stats_x,
+            stats_y - 56,
+            arcade.color.BLACK,
+            22,
+            bold=True,
+        )
+        arcade.draw_text(
+            hero_data["desc"],
+            panel_left + 20,
+            panel_bottom + 20,
+            arcade.color.BLACK,
+            14,
+            width=panel_right - panel_left - 40,
+        )
+
+        select_button_w = 260
+        select_button_h = 50
+        select_button_x = self.window.width // 2 - select_button_w // 2
+        select_button_y = 40
+        self.select_button = (select_button_x, select_button_y, select_button_w, select_button_h)
+        arcade.draw_lbwh_rectangle_filled(
+            select_button_x, select_button_y, select_button_w, select_button_h, arcade.color.LIGHT_GRAY
+        )
+        arcade.draw_lbwh_rectangle_outline(
+            select_button_x, select_button_y, select_button_w, select_button_h, arcade.color.BLACK
+        )
+        arcade.draw_text(
+            "ВЫБРАТЬ ПЕРСОНАЖА",
+            select_button_x + select_button_w // 2,
+            select_button_y + select_button_h // 2,
+            arcade.color.BLACK,
+            16,
+            anchor_x="center",
+            anchor_y="center",
+            bold=True,
+        )
+
+        arcade.draw_text(
+            "Enter - выбрать, Esc - назад",
+            self.window.width // 2,
+            10,
+            arcade.color.BLACK,
+            14,
+            anchor_x="center",
+        )
+
+    def on_mouse_press(self, x, y, button, modifiers):
+        if button != arcade.MOUSE_BUTTON_LEFT:
+            return
+        for i in range(len(self.heroes)):
+            y_top = 400 - i * 70
+            y_bottom = y_top + 50
+            if 130 <= x <= 310 and y_top <= y <= y_bottom:
+                self.selected = i
+        if hasattr(self, "select_button"):
+            btn_x, btn_y, btn_w, btn_h = self.select_button
+            if btn_x <= x <= btn_x + btn_w and btn_y <= y <= btn_y + btn_h:
+                self.start_view.selected_hero = self.selected
+                self.window.show_view(self.start_view)
+
+    def on_key_press(self, key, modifiers):
+        if key == arcade.key.ENTER:
+            self.start_view.selected_hero = self.selected
+            self.window.show_view(self.start_view)
+        elif key == arcade.key.ESCAPE:
+            self.window.show_view(self.start_view)
+
+
+class MyGame(arcade.View):
+    def __init__(self, selected_hero=0):
+        super().__init__()
+        self.map = arcade.load_texture(MAP_IMAGE)
+        hero_image = f"images/пудж.png"
+        self.hero_sprite = arcade.Sprite(hero_image, scale=0.25)
+        self.hero_sprite.center_x = MAP_WIDTH // 2
+        self.hero_sprite.center_y = MAP_HEIGHT // 2
+        self.sprite_list = arcade.SpriteList()
+        self.sprite_list.append(self.hero_sprite)
+        self.speed = 5
+        self.hp_max = 100 + selected_hero * 20
+        self.hp = self.hp_max
+        self.exp_max = 100
+        self.exp = 0
+        self.time_elapsed = 0.0
+        self.wave = 0
+        self.view_width = 800
+        self.view_height = 500
+        self.viewport_left = 0
+        self.viewport_bottom = 0
+        self.move_left = False
+        self.move_right = False
+        self.move_up = False
+        self.move_down = False
+
+    def on_show_view(self):
+        if self.window:
+            self.view_width = self.window.width
+            self.view_height = self.window.height
+            self.update_camera(force=True)
+
+    def on_resize(self, width, height):
+        super().on_resize(width, height)
+        self.view_width = width
+        self.view_height = height
+        self.update_camera(force=True)
+
+    def on_draw(self):
+        self.clear()
+        offset_x = -self.viewport_left
+        offset_y = -self.viewport_bottom
+        rect = arcade.rect.XYWH(
+            MAP_WIDTH // 2 + offset_x,
+            MAP_HEIGHT // 2 + offset_y,
+            MAP_WIDTH,
+            MAP_HEIGHT,
+        )
+        arcade.draw_texture_rect(self.map, rect)
+        for sprite in self.sprite_list:
+            old_x = sprite.center_x
+            old_y = sprite.center_y
+            sprite.center_x = old_x + offset_x
+            sprite.center_y = old_y + offset_y
+        self.sprite_list.draw()
+        for sprite in self.sprite_list:
+            sprite.center_x -= offset_x
+            sprite.center_y -= offset_y
+        self.draw_hud()
+
+    def draw_hud(self):
+        bar_width = 220
+        bar_height = 18
+        hp_ratio = self.hp / self.hp_max if self.hp_max else 0
+        exp_ratio = self.exp / self.exp_max if self.exp_max else 0
+
+        hp_x = 20
+        hp_y = self.view_height - 40
+        exp_x = 20
+        exp_y = self.view_height - 70
+
+        arcade.draw_lbwh_rectangle_outline(
+            hp_x, hp_y, bar_width, bar_height, arcade.color.BLACK
+        )
+        arcade.draw_lbwh_rectangle_filled(
+            hp_x, hp_y, int(bar_width * hp_ratio), bar_height, arcade.color.RED
+        )
+        arcade.draw_text(
+            f"HP: {self.hp}/{self.hp_max}",
+            hp_x + bar_width + 10,
+            hp_y + 2,
+            arcade.color.BLACK,
+            12,
+        )
+
+        arcade.draw_lbwh_rectangle_outline(
+            exp_x, exp_y, bar_width, bar_height, arcade.color.BLACK
+        )
+        arcade.draw_lbwh_rectangle_filled(
+            exp_x, exp_y, int(bar_width * exp_ratio), bar_height, arcade.color.BLUE
+        )
+        arcade.draw_text(
+            f"EXP: {self.exp}/{self.exp_max}",
+            exp_x + bar_width + 10,
+            exp_y + 2,
+            arcade.color.BLACK,
+            12,
+        )
+
+        minutes = int(self.time_elapsed) // 60
+        seconds = int(self.time_elapsed) % 60
+        arcade.draw_text(
+            f"Время: {minutes:02d}:{seconds:02d}",
+            self.view_width - 180,
+            self.view_height - 40,
+            arcade.color.BLACK,
+            14,
+        )
+        arcade.draw_text(
+            f"Волна: {self.wave}",
+            self.view_width - 180,
+            self.view_height - 70,
+            arcade.color.BLACK,
+            14,
+        )
+
+    def on_key_press(self, key, modifiers):
+        if key in (arcade.key.UP, arcade.key.W):
+            self.move_up = True
+        elif key in (arcade.key.DOWN, arcade.key.S):
+            self.move_down = True
+        elif key in (arcade.key.LEFT, arcade.key.A):
+            self.move_left = True
+        elif key in (arcade.key.RIGHT, arcade.key.D):
+            self.move_right = True
+        self.update_movement()
+
+    def on_key_release(self, key, modifiers):
+        if key in (arcade.key.UP, arcade.key.W, arcade.key.DOWN, arcade.key.S):
+            if key in (arcade.key.UP, arcade.key.W):
+                self.move_up = False
+            if key in (arcade.key.DOWN, arcade.key.S):
+                self.move_down = False
+        if key in (arcade.key.LEFT, arcade.key.A, arcade.key.RIGHT, arcade.key.D):
+            if key in (arcade.key.LEFT, arcade.key.A):
+                self.move_left = False
+            if key in (arcade.key.RIGHT, arcade.key.D):
+                self.move_right = False
+        self.update_movement()
+
+    def update_movement(self):
+        dx = 0
+        dy = 0
+        if self.move_left and not self.move_right:
+            dx = -self.speed
+        elif self.move_right and not self.move_left:
+            dx = self.speed
+        if self.move_up and not self.move_down:
+            dy = self.speed
+        elif self.move_down and not self.move_up:
+            dy = -self.speed
+        self.hero_sprite.change_x = dx
+        self.hero_sprite.change_y = dy
+
+    def on_update(self, delta_time):
+        self.time_elapsed += delta_time
+        self.hero_sprite.center_x += self.hero_sprite.change_x
+        self.hero_sprite.center_y += self.hero_sprite.change_y
+        if self.hero_sprite.center_y + self.hero_sprite.height // 2 >= MAP_HEIGHT:
+            self.hero_sprite.center_y = MAP_HEIGHT - self.hero_sprite.height // 2
+        if self.hero_sprite.center_y - self.hero_sprite.height // 2 <= 0:
+            self.hero_sprite.center_y = self.hero_sprite.height // 2
+        if self.hero_sprite.center_x + self.hero_sprite.width // 2 >= MAP_WIDTH:
+            self.hero_sprite.center_x = MAP_WIDTH - self.hero_sprite.width // 2
+        if self.hero_sprite.center_x - self.hero_sprite.width // 2 <= 0:
+            self.hero_sprite.center_x = self.hero_sprite.width // 2
+        self.update_camera()
+
+    def update_camera(self, force=False):
+        target_x = self.hero_sprite.center_x - self.view_width / 2
+        target_y = self.hero_sprite.center_y - self.view_height / 2
+
+        max_x = max(0, MAP_WIDTH - self.view_width)
+        max_y = max(0, MAP_HEIGHT - self.view_height)
+        target_x = min(max(target_x, 0), max_x)
+        target_y = min(max(target_y, 0), max_y)
+
+        if force:
+            self.viewport_left = float(target_x)
+            self.viewport_bottom = float(target_y)
+        else:
+            self.viewport_left += (target_x - self.viewport_left) * CAMERA_LERP
+            self.viewport_bottom += (target_y - self.viewport_bottom) * CAMERA_LERP
+
+
+def main():
+    window = arcade.Window(800, 500, "Меню")
+    start_view = Start_menu()
+    window.show_view(start_view)
+    arcade.run()
+
+
+if __name__ == "__main__":
+    main()
