@@ -22,16 +22,16 @@ ENEMY_MAX_HP = 100
 BOSS_MAX_HP = 500
 WITCH_DOKTOR_SPEED = 1.2
 WITCH_DOKTOR_BULLET_SPEED = 8
-WITCH_DOKTOR_BULLET_COOLDOWN = 2.0
-WITCH_DOKTOR_BULLET_DAMAGE = 30
+WITCH_DOKTOR_BULLET_COOLDOWN = 3.0
+WITCH_DOKTOR_BULLET_DAMAGE = 15
 WITCH_DOKTOR_STOP_DISTANCE = 400
-WITCH_DOKTOR_MAX_HP = 200
-POISON_DURATION = 10.0
-POISON_DAMAGE_PER_SECOND = 10
+WITCH_DOKTOR_MAX_HP = 80
+POISON_DURATION = 5.0
+POISON_DAMAGE_PER_SECOND = 5
 POISON_TICK_INTERVAL = 1.0
-ORC_BOSS_MAX_HP = 3000
+ORC_BOSS_MAX_HP = 800
 ORC_BOSS_SPEED = 1
-ORC_BOSS_DAMAGE = 35
+ORC_BOSS_DAMAGE = 100
 ORC_BOSS_ATTACK_COOLDOWN = 2.0
 ORC_BOSS_ATTACK_RANGE = 150
 ORC_BOSS_STOP_DISTANCE = 200
@@ -71,10 +71,6 @@ def make_solid_sprite(width, height, color):
 
 
 def make_sprite_from_candidates(candidates, scale, fallback_w, fallback_h, fallback_color):
-    if candidates is None:
-        candidates = []
-    if isinstance(candidates, str):
-        candidates = [candidates]
     for path in candidates:
         try:
             try:
@@ -169,9 +165,7 @@ class FireArrow(arcade.Sprite):
     def __init__(self, x, y, target_x, target_y):
         super().__init__()
         sprite = make_sprite_from_candidates(
-            [
-                f"{ASSET_DIR}/bull.png",
-            ],
+            [f"{ASSET_DIR}/fire_arrow.jpg", f"{ASSET_DIR}/fire_arrow.png", "fire_arrow.jpg", "fire_arrow.png"],
             scale=0.08,
             fallback_w=14,
             fallback_h=14,
@@ -200,9 +194,7 @@ class IceBall(arcade.Sprite):
     def __init__(self, x, y, target_x, target_y):
         super().__init__()
         sprite = make_sprite_from_candidates(
-            [
-                f"{ASSET_DIR}/ice_ball.png",
-            ],
+            [f"{ASSET_DIR}/ice_ball.jpg", f"{ASSET_DIR}/ice_ball.png", "ice_ball.jpg", "ice_ball.png"],
             scale=0.22,
             fallback_w=18,
             fallback_h=18,
@@ -212,7 +204,7 @@ class IceBall(arcade.Sprite):
         self.center_x = x
         self.center_y = y
         self.speed = float(ICE_BALL_SPEED)
-        self.damage = 200
+        self.damage = 25
         dx = target_x - x
         dy = target_y - y
         dist = math.hypot(dx, dy)
@@ -268,7 +260,11 @@ class OrkBossBullet(arcade.Sprite):
         super().__init__()
         sprite = make_sprite_from_candidates(
             [
-                f"{ASSET_DIR}/ork_boss_bullet.png"],
+                f"{ASSET_DIR}/ork_boss_bullet.png",
+                f"{ASSET_DIR}/Witch_doctor_bullet.png",
+                "ork_boss_bullet.png",
+                "Witch_doctor_bullet.png",
+            ],
             scale=0.15,
             fallback_w=20,
             fallback_h=20,
@@ -375,17 +371,17 @@ class EnemyBase(arcade.Sprite):
 class EnemiesPudge(EnemyBase):
     def __init__(self, x, y, target, level):
         super().__init__(
-            [f"{ASSET_DIR}/enemy.png", "enemy.png"],
+            [f"{ASSET_DIR}/enemy_pudge.png", "enemy_pudge.png"],
             scale=0.05,
             x=x,
             y=y,
             target=target,
             collision_radius=35,
         )
-        self.max_hp = float(120 + level * 2.2)
+        self.max_hp = float(40 + level * 8)
         self.hp = float(self.max_hp)
-        self.base_speed = 1.8 + min(1.4, level * 0.008)
-        self.damage = int(random.randint(7, 12) * (2.0 + level * 0.01))
+        self.base_speed = 1.7 + min(1.6, level * 0.01)
+        self.damage = int(random.randint(5, 10) * (1.0 + level * 0.02))
         self.shooting = False
 
     def update(self, delta_time: float = 1 / 60):
@@ -411,10 +407,10 @@ class WitchDoktor(EnemyBase):
             target=target,
             collision_radius=45,
         )
-        self.max_hp = float(WITCH_DOKTOR_MAX_HP + level * 1.4)
+        self.max_hp = float(WITCH_DOKTOR_MAX_HP + level * 4)
         self.hp = float(self.max_hp)
         self.base_speed = float(WITCH_DOKTOR_SPEED)
-        self.damage = int(random.randint(7, 11) * (2.0 + level * 0.01))
+        self.damage = int(random.randint(5, 10) * (1.0 + level * 0.02))
         self.bullet_cooldown = 0.0
         self.stop_distance = float(WITCH_DOKTOR_STOP_DISTANCE)
         self.shooting = False
@@ -424,7 +420,10 @@ class WitchDoktor(EnemyBase):
             return None
         self.bullet_cooldown = float(WITCH_DOKTOR_BULLET_COOLDOWN)
         bullet = WitchDoktorBullet(self.center_x, self.center_y, self.target.center_x, self.target.center_y)
-        bullet.damage = int(max(float(bullet.damage), float(self.damage)))
+        try:
+            bullet.damage = int(max(float(bullet.damage), float(self.damage)))
+        except Exception:
+            pass
         return bullet
 
     def try_shoot(self):
@@ -453,22 +452,17 @@ class WitchDoktor(EnemyBase):
 class FireArchers(EnemyBase):
     def __init__(self, x, y, target, level):
         super().__init__(
-            [
-                f"{ASSET_DIR}/fire_archer.png",
-                f"{ASSET_DIR}/fire_archer.jpg",
-                "fire_archer.png",
-                "fire_archer.jpg",
-            ],
+            [f"{ASSET_DIR}/fire_archer.jpg", f"{ASSET_DIR}/fire_archer.png", "fire_archer.jpg", "fire_archer.png"],
             scale=0.06,
             x=x,
             y=y,
             target=target,
             collision_radius=30,
         )
-        self.max_hp = float(130 + level * 1.9)
+        self.max_hp = float(60 + level * 6)
         self.hp = float(self.max_hp)
-        self.base_speed = 1.7 + min(1.0, level * 0.006)
-        self.damage = int(random.randint(6, 10) * (2.0 + level * 0.011))
+        self.base_speed = 1.6 + min(1.2, level * 0.006)
+        self.damage = int(random.randint(5, 10) * (1.0 + level * 0.02))
         self.arrow_cooldown = 0.0
         self.stop_distance = 260.0
         self.shooting = False
@@ -478,7 +472,10 @@ class FireArchers(EnemyBase):
             return None
         self.arrow_cooldown = float(ARROW_COOLDOWN)
         arrow = FireArrow(self.center_x, self.center_y, self.target.center_x, self.target.center_y)
-        arrow.damage = int(max(float(arrow.damage), float(self.damage)))
+        try:
+            arrow.damage = int(max(float(arrow.damage), float(self.damage)))
+        except Exception:
+            pass
         return arrow
 
     def try_shoot(self):
@@ -508,8 +505,12 @@ class BossDragon(EnemyBase):
     def __init__(self, x, y, target, level):
         super().__init__(
             [
-                f"{ASSET_DIR}/boss1.png",
-                "boss1.png",
+                f"{ASSET_DIR}/blue_dragon.png",
+                f"{ASSET_DIR}/ice_dragon.jpg",
+                f"{ASSET_DIR}/ice_dragon.png",
+                "blue_dragon.png",
+                "ice_dragon.jpg",
+                "ice_dragon.png",
             ],
             scale=0.35,
             x=x,
@@ -517,10 +518,10 @@ class BossDragon(EnemyBase):
             target=target,
             collision_radius=250,
         )
-        self.max_hp = float(5000 + level * 25)
+        self.max_hp = float(BOSS_MAX_HP + level * 40)
         self.hp = float(self.max_hp)
         self.base_speed = 2.6
-        self.damage = int(50 + level * 0.2)
+        self.damage = 40
         self.ice_cooldown = 0.0
         self.stop_distance = 720.0
         self.shooting = False
@@ -530,7 +531,10 @@ class BossDragon(EnemyBase):
             return None
         self.ice_cooldown = float(ICE_BALL_COOLDOWN)
         ball = IceBall(self.center_x, self.center_y, self.target.center_x, self.target.center_y)
-        ball.damage = int(max(float(ball.damage), float(self.damage)))
+        try:
+            ball.damage = int(max(float(ball.damage), float(self.damage)))
+        except Exception:
+            pass
         return ball
 
     def try_shoot(self):
@@ -559,20 +563,17 @@ class BossDragon(EnemyBase):
 class OrkBoss(EnemyBase):
     def __init__(self, x, y, target, level):
         super().__init__(
-            [
-                f"{ASSET_DIR}/boss2.png",
-                "boss2.png",
-            ],
+            [f"{ASSET_DIR}/ork_boss.jpg", f"{ASSET_DIR}/ork_boss.png", "ork_boss.jpg", "ork_boss.png"],
             scale=0.7,
             x=x,
             y=y,
             target=target,
             collision_radius=120,
         )
-        self.max_hp = float(3200 + level * 18)
+        self.max_hp = float(ORC_BOSS_MAX_HP + level * 30)
         self.hp = float(self.max_hp)
         self.base_speed = float(ORC_BOSS_SPEED)
-        self.damage = int(100 + level * 0.25)
+        self.damage = int(ORC_BOSS_DAMAGE)
         self.attack_cooldown = 0.0
         self.stop_distance = float(ORC_BOSS_STOP_DISTANCE)
         self.attack_range = float(ORC_BOSS_ATTACK_RANGE)
@@ -583,7 +584,10 @@ class OrkBoss(EnemyBase):
             return None
         self.attack_cooldown = float(ORC_BOSS_ATTACK_COOLDOWN)
         bullet = OrkBossBullet(self.center_x, self.center_y, self.target.center_x, self.target.center_y)
-        bullet.damage = int(max(float(bullet.damage), float(self.damage)))
+        try:
+            bullet.damage = int(max(float(bullet.damage), float(self.damage)))
+        except Exception:
+            pass
         return bullet
 
     def try_shoot(self):
@@ -627,9 +631,9 @@ class Start_menu(arcade.View):
         self.selected_hero = 0
         self.hero_textures = []
         for i in range(4):
-            tex = load_texture_safe(f"{ASSET_DIR}/hero{i + 1}.png")
+            tex = load_texture_safe(f"{ASSET_DIR}/hero{i+1}.png")
             if tex is None:
-                tex = load_texture_safe(f"hero{i + 1}.png")
+                tex = load_texture_safe(f"hero{i+1}.png")
             self.hero_textures.append(tex)
 
     def on_draw(self):
@@ -762,15 +766,15 @@ class HeroSelectView(arcade.View):
             self.map = load_texture_safe("map.png")
         self.heroes = []
         for i in range(4):
-            tex = load_texture_safe(f"{ASSET_DIR}/hero{i + 1}.png")
+            tex = load_texture_safe(f"{ASSET_DIR}/hero{i+1}.png")
             if tex is None:
-                tex = load_texture_safe(f"hero{i + 1}.png")
+                tex = load_texture_safe(f"hero{i+1}.png")
             self.heroes.append({
                 "texture": tex,
                 "str": 10 + i * 2,
                 "def": 5 + i,
                 "hp": HERO_MAX_HP + i * 20,
-                "desc": f"Описание героя {i + 1}."
+                "desc": f"Описание героя {i+1}."
             })
         self.selected = self.start_view.selected_hero
 
@@ -807,7 +811,7 @@ class HeroSelectView(arcade.View):
 
             arcade.draw_lrbt_rectangle_filled(left, right, bottom, top, color)
             arcade.draw_text(
-                f"Герой {i + 1}",
+                f"Герой {i+1}",
                 left + (right - left) // 2,
                 y + 25,
                 arcade.color.BLACK,
@@ -941,12 +945,12 @@ class MyGame(arcade.View):
         self.sprite_list.append(self.hero_sprite)
         self.speed = 5
         self.level = 1
-        self.damage = float(30 + selected_hero * 3)
+        self.damage = float(10 + selected_hero * 2)
         self.defence = 5 + selected_hero
         self.exp = 0
         self.exp_max = 100
-        self.exp_multiplier = 5.0 + selected_hero * 0.05
-        self.base_exp_per_kill = 5 + selected_hero * 5
+        self.exp_multiplier = 100 + selected_hero * 0.05
+        self.base_exp_per_kill = 10 + selected_hero * 5
         self.time_elapsed = 0.0
         self.wave = 1
         self.view_width = 800
@@ -964,8 +968,7 @@ class MyGame(arcade.View):
         self.boss_list = arcade.SpriteList()
         self.golem_list = arcade.SpriteList()
         self.mobs_killed = 0
-        self.boss2_spawned = False
-        self.boss1_spawned = False
+        self.boss_spawned = False
         self.game_over = False
         self.win = False
         self.end_timer = 0.0
@@ -995,17 +998,9 @@ class MyGame(arcade.View):
         self.lightning_radius = 0.0
         self.lightning_hit_out = set()
         self.lightning_hit_in = set()
-
-        self.skill5_mode = "passive"
-        self.skill5_active = False
         self.skill5_timer = 0.0
         self.skill5_cooldown = 0.0
         self.skill5_tick = 0.0
-        self.skill5_passive_hp_bonus = 0
-        self.skill5_max_stacks = 50
-        self.skill5_stacks = 0
-        self.skill5_last_kill_time = 0
-
         self.skill6_timer = 0.0
         self.skill6_cooldown = 0.0
         self.skill7_timer = 0.0
@@ -1065,9 +1060,8 @@ class MyGame(arcade.View):
         hy = self.hero_sprite.center_y + offset_y
         if self.lightning_active:
             arcade.draw_circle_outline(hx, hy, self.lightning_radius, arcade.color.YELLOW, 3)
-        if self.skill5_active and self.skill5_timer > 0 and self.skill5_mode == "active":
+        if self.skill5_timer > 0:
             arcade.draw_circle_outline(hx, hy, 220, arcade.color.PURPLE, 3)
-
         if self.skill7_timer > 0:
             arcade.draw_circle_outline(hx, hy, 80, arcade.color.GRAY, 2)
 
@@ -1220,12 +1214,6 @@ class MyGame(arcade.View):
             elif skill_id == 5:
                 cd = self.skill5_cooldown
                 active = self.skill5_timer
-                mode_text = "A" if self.skill5_mode == "active" else "P"
-                arcade.draw_text(mode_text, x + icon - 8, y + icon - 8, arcade.color.BLACK, 10,
-                                 anchor_x="center", anchor_y="center", bold=True)
-                if self.skill5_mode == "passive" and self.skill5_stacks > 0:
-                    arcade.draw_text(f"{self.skill5_stacks}", x + icon // 2, y - 14, arcade.color.BLACK, 10,
-                                     anchor_x="center", bold=True)
             elif skill_id == 6:
                 cd = self.skill6_cooldown
                 active = self.skill6_timer
@@ -1294,8 +1282,11 @@ class MyGame(arcade.View):
         self.update_movement()
 
     def key_to_number(self, key):
-        if 49 <= int(key) <= 57:
-            return int(key) - 48
+        try:
+            if 49 <= int(key) <= 57:
+                return int(key) - 48
+        except Exception:
+            pass
         for i in range(1, 10):
             a = getattr(arcade.key, f"_{i}", None)
             b = getattr(arcade.key, f"KEY_{i}", None)
@@ -1320,7 +1311,7 @@ class MyGame(arcade.View):
         self.hero_sprite.change_y = dy
 
     def base_heal_on_kill(self):
-        return 6 + (self.wave // 10) * 3
+        return 5 + (self.wave // 10) * 5
 
     def heal_player(self, amount):
         self.hero_sprite.hp = min(self.hero_sprite.hp + float(amount), float(self.hero_sprite.max_hp))
@@ -1405,21 +1396,11 @@ class MyGame(arcade.View):
         self.mobs_killed += 1
         value = int(self.base_exp_per_kill * self.exp_multiplier)
         self.spawn_exp_orb(x, y, value)
-
-        if 2 in self.skills and self.skill2_timer > 0:
+        if 2 in self.skills:
             heal = self.base_heal_on_kill()
+            if self.skill2_timer > 0:
+                heal += self.base_heal_on_kill()
             self.heal_player(heal)
-
-        if 5 in self.skills and self.skill5_mode == "passive":
-            current_time = self.time_elapsed
-            if current_time - self.skill5_last_kill_time <= 10.0:
-                self.skill5_stacks = min(self.skill5_stacks + 1, self.skill5_max_stacks)
-            else:
-                self.skill5_stacks = 1
-
-            self.skill5_last_kill_time = current_time
-
-            self.update_skill5_passive_bonus()
 
     def damage_enemy(self, enemy, amount):
         enemy.hp -= float(amount)
@@ -1432,11 +1413,9 @@ class MyGame(arcade.View):
         boss = self.boss_list[0]
         boss.hp -= float(amount)
         if boss.hp <= 0:
-            is_final = bool(getattr(boss, "is_final_boss", False))
             boss.remove_from_sprite_lists()
-            if is_final:
-                self.win = True
-                self.end_timer = 0.0
+            self.win = True
+            self.end_timer = 0.0
 
     def apply_slow_to_boss(self, factor, duration):
         if not self.boss_list:
@@ -1462,11 +1441,9 @@ class MyGame(arcade.View):
         if num == 2:
             if self.skill2_cooldown > 0:
                 return
-            heal = float(self.hero_sprite.max_hp) * 0.5
-            self.hero_sprite.hp = min(self.hero_sprite.hp + heal, self.hero_sprite.max_hp)
             self.skill2_timer = 10.0
-            self.skill2_tick = 0.0
             self.skill2_cooldown = 25.0
+            self.skill2_tick = 0.0
             self.maybe_proc_skill9()
         elif num == 4:
             if self.skill4_cooldown > 0 or self.lightning_active:
@@ -1479,20 +1456,11 @@ class MyGame(arcade.View):
             self.skill4_cooldown = 14.0
             self.maybe_proc_skill9()
         elif num == 5:
-            if self.skill5_cooldown > 0:
+            if self.skill5_cooldown > 0 or self.skill5_timer > 0:
                 return
-
-            if self.skill5_mode == "active":
-                self.skill5_mode = "passive"
-                self.skill5_active = False
-                self.skill5_timer = 0.0
-            else:
-                self.skill5_mode = "active"
-                self.skill5_active = True
-                self.skill5_timer = 20.0
-                self.skill5_tick = 0.0
-
-            self.skill5_cooldown = 5.0
+            self.skill5_timer = 25.0
+            self.skill5_cooldown = 60.0
+            self.skill5_tick = 0.0
             self.maybe_proc_skill9()
         elif num == 6:
             if self.skill6_cooldown > 0 or self.skill6_timer > 0:
@@ -1504,7 +1472,7 @@ class MyGame(arcade.View):
             if self.skill7_cooldown > 0 or self.skill7_timer > 0:
                 return
             self.skill7_timer = 15.0
-            self.skill7_cooldown = 60.0
+            self.skill7_cooldown = 120.0
             self.maybe_proc_skill9()
         elif num == 8:
             if self.skill8_cooldown > 0:
@@ -1512,45 +1480,6 @@ class MyGame(arcade.View):
             if self.golem_list:
                 return
             self.golem_armed = True
-
-    def update_skill5_passive_bonus(self):
-        if self.skill5_mode != "passive":
-            return
-
-        new_bonus = self.skill5_stacks * 20
-
-        hp_diff = new_bonus - self.skill5_passive_hp_bonus
-        self.hero_sprite.max_hp += hp_diff
-        self.hero_sprite.hp += hp_diff
-
-        self.skill5_passive_hp_bonus = new_bonus
-
-    def update_aura(self, delta_time):
-        if self.skill5_timer <= 0 or self.skill5_mode != "active":
-            return
-        self.skill5_tick += delta_time
-        while self.skill5_tick >= 1.0 and self.skill5_timer > 0:
-            self.skill5_tick -= 1.0
-            hx = self.hero_sprite.center_x
-            hy = self.hero_sprite.center_y
-
-            for enemy in list(self.enemy_list):
-                dist = math.hypot(enemy.center_x - hx, enemy.center_y - hy)
-                if dist <= 220:
-                    damage = 10 + (self.skill5_stacks * 0.5)
-                    self.damage_enemy(enemy, damage)
-                    if hasattr(enemy, "apply_slow"):
-                        enemy.apply_slow(0.9, 1.2)
-
-            if self.boss_list:
-                boss = self.boss_list[0]
-                dist = math.hypot(boss.center_x - hx, boss.center_y - hy)
-                if dist <= 220:
-                    damage = 10 + (self.skill5_stacks * 0.5)
-                    self.damage_boss(damage)
-                    self.apply_slow_to_boss(0.9, 1.2)
-
-            self.damage_player(15, use_defence=False, can_reduce=False)
 
     def try_summon_golem(self, x, y):
         if 8 not in self.skills:
@@ -1563,8 +1492,8 @@ class MyGame(arcade.View):
         world_x = x + self.viewport_left
         world_y = y + self.viewport_bottom
         golem = make_sprite_from_candidates(
-            [f"{ASSET_DIR}/skils8.png"],
-            scale=2,
+            [f"{ASSET_DIR}/golem.png", "golem.png"],
+            scale=0.35,
             fallback_w=90,
             fallback_h=90,
             fallback_color=arcade.color.ORANGE,
@@ -1576,15 +1505,15 @@ class MyGame(arcade.View):
         except Exception:
             pass
         self.golem_list.append(golem)
-        self.golem_hp = 500.0
+        self.golem_hp = 200.0
         self.golem_life_timer = 60.0
-        self.skill8_cooldown = 90.0
+        self.skill8_cooldown = 60.0
         self.maybe_proc_skill9()
 
     def update_lightning(self, delta_time):
         if not self.lightning_active:
             return
-        max_r = 780.0
+        max_r = 260.0
         speed = 520.0
         if self.lightning_phase == 0:
             self.lightning_radius += speed * delta_time
@@ -1607,7 +1536,7 @@ class MyGame(arcade.View):
             dist = math.hypot(enemy.center_x - hx, enemy.center_y - hy)
             if dist <= self.lightning_radius:
                 hit_set.add(key)
-                self.damage_enemy(enemy, 60)
+                self.damage_enemy(enemy, 20)
                 if hasattr(enemy, "apply_slow"):
                     enemy.apply_slow(0.65, 2.5)
         if self.boss_list:
@@ -1619,6 +1548,28 @@ class MyGame(arcade.View):
                     hit_set.add(key)
                     self.damage_boss(20)
                     self.apply_slow_to_boss(0.75, 2.5)
+
+    def update_aura(self, delta_time):
+        if self.skill5_timer <= 0:
+            return
+        self.skill5_tick += delta_time
+        while self.skill5_tick >= 1.0 and self.skill5_timer > 0:
+            self.skill5_tick -= 1.0
+            hx = self.hero_sprite.center_x
+            hy = self.hero_sprite.center_y
+            for enemy in list(self.enemy_list):
+                dist = math.hypot(enemy.center_x - hx, enemy.center_y - hy)
+                if dist <= 220:
+                    self.damage_enemy(enemy, 10)
+                    if hasattr(enemy, "apply_slow"):
+                        enemy.apply_slow(0.9, 1.2)
+            if self.boss_list:
+                boss = self.boss_list[0]
+                dist = math.hypot(boss.center_x - hx, boss.center_y - hy)
+                if dist <= 220:
+                    self.damage_boss(10)
+                    self.apply_slow_to_boss(0.9, 1.2)
+            self.damage_player(10, use_defence=False, can_reduce=False)
 
     def on_update(self, delta_time):
         if self.game_over or self.win:
@@ -1644,23 +1595,9 @@ class MyGame(arcade.View):
         else:
             self.skill2_tick = 0.0
 
-        if self.skill5_mode == "active":
-            if self.skill5_timer > 0:
-                self.skill5_timer = max(0.0, self.skill5_timer - delta_time)
-                self.update_aura(delta_time)
-            if self.skill5_timer <= 0:
-                self.skill5_mode = "passive"
-                self.skill5_active = False
-                self.skill5_timer = 0.0
-                self.skill5_tick = 0.0
-
-        if (5 in self.skills and self.skill5_mode == "passive" and
-                self.skill5_stacks > 0 and
-                self.time_elapsed - self.skill5_last_kill_time > 10.0):
-            self.skill5_stacks = max(0, self.skill5_stacks - 1)
-            self.update_skill5_passive_bonus()
-            self.skill5_last_kill_time = self.time_elapsed
-
+        if self.skill5_timer > 0:
+            self.skill5_timer = max(0.0, self.skill5_timer - delta_time)
+            self.update_aura(delta_time)
         if self.skill6_timer > 0:
             self.skill6_timer = max(0.0, self.skill6_timer - delta_time)
         if self.skill7_timer > 0:
@@ -1675,7 +1612,10 @@ class MyGame(arcade.View):
                 self.golem_hp = 0.0
 
         self.update_lightning(delta_time)
-        self.hero_sprite.update_poison(delta_time)
+        try:
+            self.hero_sprite.update_poison(delta_time)
+        except Exception:
+            pass
 
         self.hero_sprite.center_x += self.hero_sprite.change_x
         self.hero_sprite.center_y += self.hero_sprite.change_y
@@ -1771,6 +1711,9 @@ class MyGame(arcade.View):
                 self.gain_exp(int(getattr(orb, "value", 0)))
                 orb.remove_from_sprite_lists()
 
+        if not self.boss_spawned and self.level >= 100:
+            self.spawn_boss()
+
         if self.boss_list:
             boss = self.boss_list[0]
             boss_target = enemy_target
@@ -1815,14 +1758,14 @@ class MyGame(arcade.View):
                 self.end_timer = 0.0
                 return
 
-        if not self.boss_list and not self.enemy_list:
+        if self.boss_spawned and not self.boss_list and not self.win:
+            self.win = True
+            self.end_timer = 0.0
+            return
+
+        if not self.boss_spawned and not self.enemy_list:
             self.wave += 1
-            if self.wave == 50 and not self.boss2_spawned:
-                self.spawn_boss2()
-            elif self.wave == 100 and not self.boss1_spawned:
-                self.spawn_boss1()
-            else:
-                self.spawn_wave(self.wave)
+            self.spawn_wave(self.wave)
 
         self.update_camera()
 
@@ -1845,19 +1788,19 @@ class MyGame(arcade.View):
         r = random.random()
         w = int(getattr(self, "wave", 1) or 1)
         if w < 3:
-            enemy = EnemiesPudge(x, y, self.hero_sprite, w)
+            enemy = EnemiesPudge(x, y, self.hero_sprite, self.level)
         elif w < 6:
             if r < 0.7:
-                enemy = EnemiesPudge(x, y, self.hero_sprite, w)
+                enemy = EnemiesPudge(x, y, self.hero_sprite, self.level)
             else:
-                enemy = FireArchers(x, y, self.hero_sprite, w)
+                enemy = FireArchers(x, y, self.hero_sprite, self.level)
         else:
             if r < 0.6:
-                enemy = EnemiesPudge(x, y, self.hero_sprite, w)
+                enemy = EnemiesPudge(x, y, self.hero_sprite, self.level)
             elif r < 0.85:
-                enemy = FireArchers(x, y, self.hero_sprite, w)
+                enemy = FireArchers(x, y, self.hero_sprite, self.level)
             else:
-                enemy = WitchDoktor(x, y, self.hero_sprite, w)
+                enemy = WitchDoktor(x, y, self.hero_sprite, self.level)
         self.enemy_list.append(enemy)
 
     def spawn_exp_orb(self, x, y, value):
@@ -1920,6 +1863,8 @@ class MyGame(arcade.View):
                 self.hero_sprite.hp = min(self.hero_sprite.hp + 20.0, self.hero_sprite.max_hp)
                 self.damage *= 1.05
             self.exp_max = int(100 + (self.level - 1) * 25)
+            if self.level >= 100 and not self.boss_spawned:
+                self.spawn_boss()
             if self.level % 10 == 0 and len(self.skills) < MAX_SKILLS:
                 self.skill_selecting = True
                 break
@@ -2022,21 +1967,12 @@ class MyGame(arcade.View):
         world_y = y + self.viewport_bottom
         self.spawn_bullet(self.hero_sprite.center_x, self.hero_sprite.center_y, world_x, world_y, self.damage)
 
-    def spawn_boss1(self):
+    def spawn_boss(self):
         x = random.randint(400, MAP_WIDTH - 400)
         y = random.randint(400, MAP_HEIGHT - 400)
-        boss = BossDragon(x, y, self.hero_sprite, int(self.wave))
-        boss.is_final_boss = True
+        boss = BossDragon(x, y, self.hero_sprite, self.level)
         self.boss_list.append(boss)
-        self.boss1_spawned = True
-
-    def spawn_boss2(self):
-        x = random.randint(400, MAP_WIDTH - 400)
-        y = random.randint(400, MAP_HEIGHT - 400)
-        boss = OrkBoss(x, y, self.hero_sprite, int(self.wave))
-        boss.is_final_boss = False
-        self.boss_list.append(boss)
-        self.boss2_spawned = True
+        self.boss_spawned = True
 
     def draw_end_screen(self, title):
         w = min(720, self.view_width - 80)
